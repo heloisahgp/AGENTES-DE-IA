@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agente de Contratos — Lastlink</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a38;
+    --accent: #7c5cfc;
+    --accent2: #b490ff;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+
+  /* Layout */
+  .shell { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 28px 20px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .logo {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .step-list { list-style: none; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background .15s;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    border: 1px solid transparent;
+  }
+  .step-item.active {
+    background: rgba(124,92,252,.12);
+    color: var(--accent2);
+    border-color: rgba(124,92,252,.25);
+  }
+  .step-item.done { color: var(--green); }
+  .step-num {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    transition: all .15s;
+  }
+  .step-item.active .step-num { background: var(--accent); border-color: var(--accent); color: white; }
+  .step-item.done .step-num { background: var(--green); border-color: var(--green); color: white; }
+
+  /* Main */
+  .main { padding: 40px 48px; max-width: 860px; }
+  .section-head {
+    margin-bottom: 32px;
+  }
+  .section-head h1 {
+    font-family: var(--font-head);
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .section-head p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-family: var(--font-head);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: var(--surface2);
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(124,92,252,.06); }
+  .upload-zone.has-file { border-color: var(--green); border-style: solid; }
+  .upload-icon { font-size: 32px; margin-bottom: 10px; }
+  .upload-label { font-size: 13px; color: var(--muted); }
+  .upload-label strong { color: var(--text); }
+  .upload-input { display: none; }
+  .file-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(34,197,94,.1);
+    border: 1px solid rgba(34,197,94,.3);
+    color: var(--green);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+
+  /* Input */
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 140px; line-height: 1.6; }
+  .field input::placeholder, .field textarea::placeholder { color: var(--muted); }
+
+  /* CNPJ row */
+  .cnpj-row { display: flex; gap: 10px; }
+  .cnpj-row input { flex: 1; }
+  .btn-search {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px 18px;
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity .15s;
+  }
+  .btn-search:hover { opacity: .85; }
+  .btn-search:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* Partner info box */
+  .info-box {
+    background: rgba(124,92,252,.06);
+    border: 1px solid rgba(124,92,252,.2);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    display: none;
+  }
+  .info-box.visible { display: block; }
+  .info-row { display: flex; gap: 8px; }
+  .info-key { color: var(--muted); min-width: 120px; }
+  .info-val { color: var(--text); font-weight: 500; }
+
+  /* Btn primary */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #5b3fd4 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 14px 28px;
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity .15s, transform .1s;
+    letter-spacing: .02em;
+  }
+  .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+
+  /* Progress */
+  .progress-wrap { margin: 16px 0; }
+  .progress-bar-bg { background: var(--surface2); border-radius: 99px; height: 6px; overflow: hidden; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width .4s ease; width: 0%; }
+  .progress-label { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  /* Log */
+  .log-wrap {
+    background: #080810;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+  }
+  .log-wrap.visible { display: block; }
+  .log-line { padding: 2px 0; line-height: 1.6; }
+  .log-line.ok { color: var(--green); }
+  .log-line.err { color: var(--red); }
+  .log-line.info { color: var(--accent2); }
+  .log-line.wait { color: var(--amber); }
+
+  /* Download btn */
+  .btn-download {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 16px 28px;
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 16px;
+    transition: opacity .15s;
+    text-decoration: none;
+  }
+  .btn-download.visible { display: flex; }
+  .btn-download:hover { opacity: .9; }
+
+  /* Tag */
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .tag-new { background: rgba(124,92,252,.15); color: var(--accent2); border: 1px solid rgba(124,92,252,.3); }
+
+  /* Alert */
+  .alert {
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .alert.visible { display: block; }
+  .alert-err { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; }
+  .alert-ok { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); color: #86efac; }
+
+  /* Steps panel */
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+  /* Result cards */
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .result-item { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }
+  .result-item-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
+  .result-item-val { font-size: 14px; font-weight: 500; color: var(--text); }
+
+  @media (max-width: 780px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .main { padding: 24px 20px; }
+    .result-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      Agente de Contratos
+    </div>
+    <ul class="step-list" id="sideSteps">
+      <li class="step-item active" data-step="0">
+        <div class="step-num">1</div>
+        Minuta Padrão
+      </li>
+      <li class="step-item" data-step="1">
+        <div class="step-num">2</div>
+        Dados do Parceiro (CNPJ)
+      </li>
+      <li class="step-item" data-step="2">
+        <div class="step-num">3</div>
+        Texto de Negociação
+      </li>
+      <li class="step-item" data-step="3">
+        <div class="step-num">4</div>
+        Processar & Baixar
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Step 0: Upload minuta -->
+    <div class="step-panel active" id="panel-0">
+      <div class="section-head">
+        <h1>Minuta Padrão</h1>
+        <p>Faça o upload do contrato base (.docx) que será usado como template de parceria.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Arquivo do Contrato</div>
+        <div class="upload-zone" id="dropMinuta" onclick="document.getElementById('fileMinuta').click()">
+          <div class="upload-icon">📄</div>
+          <div class="upload-label"><strong>Clique ou arraste</strong> o arquivo .docx aqui</div>
+          <div id="minutaBadge"></div>
+        </div>
+        <input type="file" id="fileMinuta" class="upload-input" accept=".docx">
+      </div>
+      <button class="btn-primary" id="btnStep0" onclick="goStep(1)" disabled>
+        Próximo: Dados do Parceiro →
+      </button>
+    </div>
+
+    <!-- Step 1: CNPJ -->
+    <div class="step-panel" id="panel-1">
+      <div class="section-head">
+        <h1>Dados do Parceiro</h1>
+        <p>Informe o CNPJ e o agente buscará automaticamente os dados cadastrais via Receita Federal.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Consulta CNPJ</div>
+        <div class="field">
+          <label>CNPJ do Parceiro</label>
+          <div class="cnpj-row">
+            <input type="text" id="inputCNPJ" placeholder="00.000.000/0001-00" maxlength="18">
+            <button class="btn-search" id="btnBuscarCNPJ" onclick="buscarCNPJ()">Buscar</button>
+          </div>
+        </div>
+        <div class="alert alert-err" id="alertCNPJ"></div>
+        <div class="info-box" id="cnpjInfo"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Ajuste Manual (opcional)</div>
+        <div class="field">
+          <label>Razão Social</label>
+          <input type="text" id="razaoSocial" placeholder="Nome completo da empresa">
+        </div>
+        <div class="field">
+          <label>Representante Legal</label>
+          <input type="text" id="representante" placeholder="Nome do sócio responsável pela assinatura">
+        </div>
+        <div class="field">
+          <label>Endereço Completo</label>
+          <input type="text" id="endereco" placeholder="Rua, número, complemento, cidade – UF, CEP">
+        </div>
+        <div class="field">
+          <label>Foro / Cidade</label>
+          <input type="text" id="foro" placeholder="Ex: São Paulo – SP">
+        </div>
+      </div>
+      <button class="btn-primary" id="btnStep1" onclick="goStep(2)" disabled>
+        Próximo: Texto de Negociação →
+      </button>
+    </div>
+
+    <!-- Step 2: Negociação -->
+    <div class="step-panel" id="panel-2">
+      <div class="section-head">
+        <h1>Texto de Negociação</h1>
+        <p>Cole o resumo completo da negociação. O agente extrairá as condições comerciais e preencherá as cláusulas automaticamente.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Conteúdo Negociado <span class="tag tag-new">IA</span></div>
+        <div class="field">
+          <label>Resumo da negociação</label>
+          <textarea id="textoNegociacao" placeholder="Cole aqui tudo que foi negociado com o parceiro: taxas, comissões, exclusividade, contrapartidas, vigência, benefícios, multas, metas...&#10;&#10;Exemplo:&#10;- Taxa: 2,99% + R$0,99 por transação&#10;- Exclusividade de 12 meses na plataforma&#10;- Comissão de 1% por indicação até R$ 10M..."></textarea>
+        </div>
+        <div class="field">
+          <label>Nome do arquivo de saída</label>
+          <input type="text" id="nomeArquivo" placeholder="Ex: Contrato_Parceria_Lastlink_Parceiro">
+        </div>
+      </div>
+      <button class="btn-primary" id="btnStep2" onclick="goStep(3)">
+        Próximo: Processar Contrato →
+      </button>
+    </div>
+
+    <!-- Step 3: Processar -->
+    <div class="step-panel" id="panel-3">
+      <div class="section-head">
+        <h1>Processar Contrato</h1>
+        <p>O agente vai analisar a minuta, extrair os campos, usar IA para preencher as cláusulas e gerar o Word final.</p>
+      </div>
+      <div class="card" id="resumoCard">
+        <div class="card-title">Resumo da Operação</div>
+        <div class="result-grid" id="resumoGrid"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Execução do Agente</div>
+        <div class="progress-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+          <div class="progress-label" id="progressLabel">Aguardando início...</div>
+        </div>
+        <div class="alert alert-err" id="alertProcess"></div>
+        <div class="log-wrap" id="logWrap"></div>
+      </div>
+      <button class="btn-primary" id="btnProcessar" onclick="processarContrato()">
+        ⚡ Iniciar Processamento
+      </button>
+      <a class="btn-download" id="btnDownload">
+        ⬇ Baixar Contrato Preenchido (.docx)
+      </a>
+    </div>
+
+  </main>
+</div>
+
+<!-- PizZip + Docxtemplater via CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let state = {
+  step: 0,
+  minutaFile: null,
+  minutaContent: null, // ArrayBuffer
+  minutaText: '',
+  cnpj: '',
+  razaoSocial: '',
+  representante: '',
+  endereco: '',
+  foro: '',
+  textoNeg: '',
+  nomeArquivo: 'Contrato_Parceria',
+};
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function goStep(n) {
+  state.step = n;
+  document.querySelectorAll('.step-panel').forEach((p,i) => p.classList.toggle('active', i===n));
+  document.querySelectorAll('.step-item').forEach((li,i) => {
+    li.classList.toggle('active', i===n);
+    if(i < n) li.classList.add('done');
+  });
+  if(n===3) buildResumo();
+}
+
+// ─── Step 0: Upload minuta ────────────────────────────────────────────────────
+const fileMinuta = document.getElementById('fileMinuta');
+const dropMinuta = document.getElementById('dropMinuta');
+const minutaBadge = document.getElementById('minutaBadge');
+
+fileMinuta.addEventListener('change', e => handleMinutaFile(e.target.files[0]));
+['dragover','dragleave','drop'].forEach(ev => {
+  dropMinuta.addEventListener(ev, e => {
+    e.preventDefault();
+    if(ev==='dragover') dropMinuta.classList.add('drag');
+    else if(ev==='dragleave') dropMinuta.classList.remove('drag');
+    else { dropMinuta.classList.remove('drag'); handleMinutaFile(e.dataTransfer.files[0]); }
+  });
+});
+
+async function handleMinutaFile(file) {
+  if(!file || !file.name.endsWith('.docx')) { alert('Por favor, selecione um arquivo .docx'); return; }
+  state.minutaFile = file;
+  const buf = await file.arrayBuffer();
+  state.minutaContent = buf;
+  // Extract text for AI context
+  try {
+    const zip = await JSZip.loadAsync(buf);
+    const xml = await zip.file('word/document.xml').async('string');
+    state.minutaText = xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 8000);
+  } catch(e) { state.minutaText = '(texto não extraído)'; }
+  dropMinuta.classList.add('has-file');
+  minutaBadge.innerHTML = `<div class="file-badge">✓ ${file.name}</div>`;
+  document.getElementById('btnStep0').disabled = false;
+  // Suggest output name
+  const base = file.name.replace('.docx','');
+  document.getElementById('nomeArquivo').value = base + '_Preenchido';
+}
+
+// ─── Step 1: CNPJ ─────────────────────────────────────────────────────────────
+document.getElementById('inputCNPJ').addEventListener('input', e => {
+  let v = e.target.value.replace(/\D/g,'');
+  if(v.length > 14) v = v.slice(0,14);
+  v = v.replace(/(\d{2})(\d)/,'$1.$2')
+       .replace(/(\d{2})\.(\d{3})(\d)/,'$1.$2.$3')
+       .replace(/\.(\d{3})(\d)/,'.$1/$2')
+       .replace(/(\d{4})(\d)/,'$1-$2');
+  e.target.value = v;
+});
+
+async function buscarCNPJ() {
+  const raw = document.getElementById('inputCNPJ').value.replace(/\D/g,'');
+  const alertEl = document.getElementById('alertCNPJ');
+  const infoEl = document.getElementById('cnpjInfo');
+  alertEl.className = 'alert alert-err'; alertEl.style.display='none';
+  if(raw.length !== 14) { showAlert(alertEl,'CNPJ inválido — deve ter 14 dígitos.'); return; }
+
+  const btn = document.getElementById('btnBuscarCNPJ');
+  btn.textContent = 'Buscando...'; btn.disabled = true;
+
+  try {
+    const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${raw}`);
+    if(!res.ok) throw new Error('CNPJ não encontrado');
+    const d = await res.json();
+
+    const razao = d.razao_social || '';
+    const logradouro = d.logradouro || '';
+    const numero = d.numero || '';
+    const compl = d.complemento || '';
+    const bairro = d.bairro || '';
+    const mun = d.municipio || '';
+    const uf = d.uf || '';
+    const cep = d.cep || '';
+    const addr = `${logradouro}, ${numero}${compl?' – '+compl:''}, ${bairro}, ${mun} – ${uf}, CEP ${cep}`.trim();
+
+    document.getElementById('razaoSocial').value = razao;
+    document.getElementById('endereco').value = addr;
+    document.getElementById('foro').value = `${mun} – ${uf}`;
+
+    // QSAs / representante
+    const qsa = d.qsa || [];
+    if(qsa.length) {
+      document.getElementById('representante').value = qsa[0].nome_socio || '';
+    }
+
+    state.cnpj = raw;
+    infoEl.innerHTML = `
+      <div class="info-row"><span class="info-key">Razão Social</span><span class="info-val">${razao}</span></div>
+      <div class="info-row"><span class="info-key">CNPJ</span><span class="info-val">${d.cnpj}</span></div>
+      <div class="info-row"><span class="info-key">Situação</span><span class="info-val">${d.descricao_situacao_cadastral||'—'}</span></div>
+      <div class="info-row"><span class="info-key">Porte</span><span class="info-val">${d.porte||'—'}</span></div>
+      <div class="info-row"><span class="info-key">Abertura</span><span class="info-val">${d.data_inicio_atividade||'—'}</span></div>
+      <div class="info-row"><span class="info-key">Endereço</span><span class="info-val">${addr}</span></div>
+      ${qsa.length?`<div class="info-row"><span class="info-key">Sócios</span><span class="info-val">${qsa.map(q=>q.nome_socio).join(', ')}</span></div>`:''}
+    `;
+    infoEl.classList.add('visible');
+    document.getElementById('btnStep1').disabled = false;
+  } catch(err) {
+    showAlert(alertEl, 'Não foi possível consultar o CNPJ. Verifique o número ou preencha manualmente abaixo.');
+    document.getElementById('btnStep1').disabled = false;
+  }
+  btn.textContent = 'Buscar'; btn.disabled = false;
+}
+
+// Allow manual fill to enable next btn
+['razaoSocial','representante','endereco','foro'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    if(document.getElementById('razaoSocial').value.trim()) {
+      document.getElementById('btnStep1').disabled = false;
+    }
+  });
+});
+
+// ─── Step 3: Build resumo ─────────────────────────────────────────────────────
+function buildResumo() {
+  // Capture latest values
+  state.razaoSocial = document.getElementById('razaoSocial').value;
+  state.representante = document.getElementById('representante').value;
+  state.endereco = document.getElementById('endereco').value;
+  state.foro = document.getElementById('foro').value;
+  state.textoNeg = document.getElementById('textoNegociacao').value;
+  state.nomeArquivo = document.getElementById('nomeArquivo').value || 'Contrato_Preenchido';
+
+  const cnpjFmt = state.cnpj ? state.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5') : '—';
+  document.getElementById('resumoGrid').innerHTML = `
+    <div class="result-item"><div class="result-item-label">Minuta</div><div class="result-item-val">${state.minutaFile?.name||'—'}</div></div>
+    <div class="result-item"><div class="result-item-label">Parceiro</div><div class="result-item-val">${state.razaoSocial||'—'}</div></div>
+    <div class="result-item"><div class="result-item-label">CNPJ</div><div class="result-item-val">${cnpjFmt}</div></div>
+    <div class="result-item"><div class="result-item-label">Representante</div><div class="result-item-val">${state.representante||'—'}</div></div>
+    <div class="result-item"><div class="result-item-label">Foro</div><div class="result-item-val">${state.foro||'—'}</div></div>
+    <div class="result-item"><div class="result-item-label">Negociação</div><div class="result-item-val">${state.textoNeg?state.textoNeg.slice(0,60)+'…':'—'}</div></div>
+  `;
+}
+
+// ─── Logging ──────────────────────────────────────────────────────────────────
+function log(msg, type='info') {
+  const wrap = document.getElementById('logWrap');
+  wrap.classList.add('visible');
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  line.textContent = `[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`;
+  wrap.appendChild(line);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function setProgress(pct, label) {
+  document.getElementById('progressBar').style.width = pct+'%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+function showAlert(el, msg) {
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ─── Main: Processar Contrato ─────────────────────────────────────────────────
+async function processarContrato() {
+  const btn = document.getElementById('btnProcessar');
+  const alertEl = document.getElementById('alertProcess');
+  alertEl.style.display='none';
+  btn.disabled = true;
+  btn.textContent = 'Processando...';
+
+  try {
+    log('Iniciando agente de contratos...', 'info');
+    setProgress(5, 'Lendo a minuta...');
+
+    // 1. Read the docx XML
+    const zip = await JSZip.loadAsync(state.minutaContent);
+    const docXml = await zip.file('word/document.xml').async('string');
+    log('Minuta lida com sucesso.', 'ok');
+    setProgress(15, 'Enviando para análise com IA...');
+
+    // 2. Call Claude API to analyze and fill
+    log('Analisando cláusulas com IA...', 'wait');
+    const cnpjFmt = state.cnpj ? state.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5') : state.cnpj;
+
+    const prompt = `Você é um especialista em contratos de parceria comercial. 
+Sua tarefa é analisar a minuta de contrato e retornar em JSON todos os campos que devem ser preenchidos/substituídos, com base nos dados fornecidos.
+
+DADOS DO PARCEIRO:
+- Razão Social: ${state.razaoSocial}
+- CNPJ: ${cnpjFmt}
+- Representante Legal: ${state.representante}
+- Endereço: ${state.endereco}
+- Foro/Cidade: ${state.foro}
+
+TEXTO DA NEGOCIAÇÃO:
+${state.textoNeg}
+
+TRECHO DA MINUTA (para contexto):
+${state.minutaText.slice(0,6000)}
+
+Responda APENAS em JSON válido com esta estrutura:
+{
+  "substitutions": [
+    {"find": "texto exato a encontrar no contrato", "replace": "texto de substituição"},
+    ...
+  ],
+  "placeholders": {
+    "razao_social": "${state.razaoSocial}",
+    "cnpj": "${cnpjFmt}",
+    "representante": "${state.representante}",
+    "endereco": "${state.endereco}",
+    "foro": "${state.foro}",
+    "vigencia": "extraída do texto de negociação",
+    "taxa": "extraída do texto de negociação",
+    "comissao": "extraída do texto de negociação",
+    "exclusividade": "extraída do texto de negociação",
+    "investimento": "extraída do texto de negociação",
+    "contrapartida": "extraída do texto de negociação",
+    "multa": "extraída do texto de negociação",
+    "outras_clausulas": "demais condições relevantes"
+  },
+  "resumo_preenchimento": "resumo do que foi preenchido"
+}
+
+Nas substitutions, inclua variações de placeholders comuns como: [NOME COMPLETO], [RAZÃO SOCIAL], [CNPJ], [ENDEREÇO], [REPRESENTANTE], [FORO], [cidade], [UF], campos em branco entre colchetes, etc. Use os dados fornecidos para preencher cada um.
+`;
+
+    const apiRes = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if(!apiRes.ok) throw new Error('Erro na API: ' + apiRes.status);
+    const apiData = await apiRes.json();
+    const rawText = apiData.content.find(b=>b.type==='text')?.text || '{}';
+    
+    setProgress(50, 'Interpretando resultado da IA...');
+    log('IA processou as cláusulas.', 'ok');
+
+    // Parse JSON from response
+    let parsed = { substitutions: [], placeholders: {} };
+    try {
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if(jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+    } catch(e) { log('Aviso: parse parcial do JSON da IA.', 'wait'); }
+
+    setProgress(60, 'Aplicando substituições no documento...');
+    log('Aplicando dados na minuta...', 'info');
+
+    // 3. Apply substitutions to the XML
+    let modXml = docXml;
+
+    // Built-in replacements from CNPJ data
+    const builtIn = [
+      ['[RAZÃO SOCIAL]', state.razaoSocial],
+      ['[NOME COMPLETO]', state.razaoSocial],
+      ['[CNPJ]', cnpjFmt],
+      ['[ENDEREÇO]', state.endereco],
+      ['[REPRESENTANTE]', state.representante],
+      ['[REPRESENTANTE LEGAL]', state.representante],
+      ['[FORO]', state.foro],
+      ['[cidade]', state.foro.split('–')[0]?.trim() || state.foro],
+      ['[UF]', state.foro.split('–')[1]?.trim() || ''],
+      ['[cidade]/[UF]', state.foro],
+    ];
+
+    let appliedCount = 0;
+    builtIn.forEach(([find, replace]) => {
+      if(find && replace && modXml.includes(find)) {
+        modXml = modXml.split(find).join(escapeXml(replace));
+        appliedCount++;
+        log(`✓ Substituído: ${find} → ${replace}`, 'ok');
+      }
+    });
+
+    // AI substitutions
+    if(parsed.substitutions?.length) {
+      parsed.substitutions.forEach(s => {
+        if(s.find && s.replace && modXml.includes(s.find)) {
+          modXml = modXml.split(s.find).join(escapeXml(s.replace));
+          appliedCount++;
+          log(`✓ IA: "${s.find.slice(0,40)}" → "${s.replace.slice(0,40)}"`, 'ok');
+        }
+      });
+    }
+
+    log(`Total: ${appliedCount} substituições aplicadas.`, 'ok');
+    setProgress(80, 'Montando arquivo Word final...');
+
+    // 4. Rebuild the docx
+    zip.file('word/document.xml', modXml);
+    const outBlob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+
+    setProgress(95, 'Preparando download...');
+    log('Arquivo Word gerado com sucesso!', 'ok');
+
+    if(parsed.resumo_preenchimento) {
+      log('Resumo: ' + parsed.resumo_preenchimento, 'info');
+    }
+
+    // 5. Setup download
+    const fileName = state.nomeArquivo.replace(/\.docx$/,'') + '.docx';
+    const url = URL.createObjectURL(outBlob);
+    const dlBtn = document.getElementById('btnDownload');
+    dlBtn.href = url;
+    dlBtn.download = fileName;
+    dlBtn.classList.add('visible');
+    dlBtn.textContent = `⬇ Baixar ${fileName}`;
+
+    setProgress(100, '✓ Concluído! O contrato está pronto para validação.');
+    log(`Arquivo: ${fileName}`, 'ok');
+
+  } catch(err) {
+    log('ERRO: ' + err.message, 'err');
+    showAlert(alertEl, 'Erro no processamento: ' + err.message);
+    setProgress(0, 'Erro — verifique o log acima.');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⚡ Reprocessar';
+}
+
+function escapeXml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
